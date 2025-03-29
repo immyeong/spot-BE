@@ -5,10 +5,15 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import spot.spot.domain.member.entity.Member;
 import spot.spot.domain.notification.command.dto.response.FcmDTO;
 import spot.spot.domain.notification.command.entity.FcmToken;
@@ -22,6 +27,7 @@ public class FcmAsyncSendingUtil {
     private final FcmTokenRepository fcmTokenRepository;
     private final FirebaseMessaging firebaseMessaging;
     // 회원 한 명과 관련된 FCM 토큰에 메시지를 보내는 기능
+
     @Async("taskExecutor")
     public void singleFcmSend(long receiverId,  FcmDTO fcmDTO) {
         fcmTokenRepository.findAllByMember_Id(receiverId)

@@ -3,8 +3,7 @@ spring:
   application:
     name: spot-be
   profiles:
-    active: dev
-    include: default
+    active: test
   thymeleaf:
     check-template-location: false
   servlet:
@@ -27,9 +26,9 @@ spring:
         enabled: true
   jwt:
     access:
-      token: 86400000
+      token: 604800000
     refresh:
-      token: 86400000
+      token: 604800000
     secretKey: dfafjdsldfkldsjfsoifjsdfjsdlkfjskadfjsdoifjsadlfjksdfasdfasdfasdfsadsdf
   kafka:
     admin:
@@ -50,8 +49,11 @@ server:
     context-path: /
   tomcat:
     threads:
-      max: 500
+      max: 1000
     max-connections: 10000
+    accept-count: 1000
+    mbeanregistry:
+      enabled: true
 
 # SWAGGER
 springdoc:
@@ -74,6 +76,7 @@ springdoc:
 
 logging:
   level:
+    com.zaxxer.hikari: DEBUG
     org:
       springframework:
         web: ERROR
@@ -96,12 +99,17 @@ kakao:
 
 management:
   endpoints:
-    prometheus:
-      enabled: true
     web:
       base-path: /api/actuator
       exposure:
-        include: prometheus
+        include: prometheus, metrics
+  metrics:
+    export:
+      prometheus:
+        enabled:true
+    enalbe:
+      all: true
+      tomcat: true
 
 mongodb:
   client: mongodb://localhost:27017

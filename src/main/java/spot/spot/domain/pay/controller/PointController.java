@@ -20,6 +20,11 @@ public class PointController {
 
     private final PointService pointService;
 
+//    @PostMapping("/serve/v1")
+//    public List<PointServeResponseDto> servePointCoupon(@Valid @RequestBody List<@Valid PointServeRequestDto> requestDto) {
+//        return pointService.servePoint(requestDto);
+//    }
+
     @PostMapping("/serve")
     public List<PointServeResponseDto> servePointCoupon(@Valid @RequestBody List<@Valid PointServeRequestDto> requestDto) {
         return pointService.servePoint(requestDto);
@@ -28,6 +33,16 @@ public class PointController {
     @GetMapping("/register")
     public void registerPointCoupon(@RequestParam @NotBlank(message = "포인트 등록 시 포인트 코드는 필수 입력값입니다.") String pointCode, Authentication auth) {
         pointService.registerPoint(pointCode, auth.getName());
+    }
+
+    @GetMapping("/find")
+    public PointServeResponseDto findPointCoupon(@RequestParam @NotBlank(message = "포인트 이름 입력은 필수 입니다.")String pointName) {
+        return pointService.findByPointName(pointName);
+    }
+
+    @GetMapping("/register/optimistic")
+    public void registerPointCouponOptimistic(@RequestParam @NotBlank(message = "포인트 등록 시 포인트 코드는 필수 입력값입니다.") String pointCode, Authentication auth) {
+        pointService.registerPointWithOptimisticLock(pointCode, auth.getName());
     }
 
     @PostMapping("/delete")

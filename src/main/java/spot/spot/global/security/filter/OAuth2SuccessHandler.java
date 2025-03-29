@@ -47,10 +47,16 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String redirectUrl = "https://ilmatch.net/oauth2/redirect";
 
-        if (redirectUri.contains("localhost:8080")) {
-            redirectUrl = "https://ilmatch.net/oauth2/redirect";
-        } else if (redirectUri.contains("ilmatch.net")) {
+//        if (redirectUri.contains("localhost:8080")) {
+//            redirectUrl = "https://ilmatch.net/oauth2/redirect";
+//        } else if (redirectUri.contains("ilmatch.net")) {
+//            redirectUrl = "http://localhost:3000/oauth2/redirect";
+//        }
+
+        if (redirectUri.contains("localhost:8080") || redirectUri.contains("172.16.24.158:8080")) {
             redirectUrl = "http://localhost:3000/oauth2/redirect";
+        } else if (redirectUri.contains("ilmatch.net")) {
+            redirectUrl = "https://ilmatch.net/oauth2/redirect";
         }
         // 🛠 리다이렉트 URL 설정
         response.sendRedirect(redirectUrl + "?accessToken=" + accessToken + "&refreshToken=" + refreshToken + "&nickname=" + encodedNickname);

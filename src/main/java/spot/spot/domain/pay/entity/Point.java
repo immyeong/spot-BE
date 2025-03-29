@@ -20,15 +20,28 @@ public class Point {
     @Column(name = "point_code", nullable = false)
     private String pointCode;
 
+    @Column(name = "count", nullable = false)
     @Setter
-    @Column(name = "is_valid", nullable = false)
-    private boolean isValid;
+    private int count;
+
+    @Enumerated(EnumType.STRING)
+    private PointStatus pointStatus;
 
     @Builder
-    private Point(String pointName, int point, String pointCode, boolean isValid) {
+    private Point(String pointName, int point, String pointCode, int count) {
         this.pointName = pointName;
         this.point = point;
         this.pointCode = pointCode;
-        this.isValid = isValid;
+        this.pointStatus = PointStatus.VALID;
+        this.count = count;
+    }
+
+    public static Point create(String pointName, int point, String pointCode, int count) {
+        return Point.builder()
+                .pointName(pointName)
+                .point(point)
+                .pointCode(pointCode)
+                .count(count)
+                .build();
     }
 }

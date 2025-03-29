@@ -10,6 +10,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 import spot.spot.domain.job.command.dto.request.RegisterWorkerRequest;
+import spot.spot.domain.job.command.dto.response.JobCertifiationResponse;
+import spot.spot.domain.job.query.dto.response.CertificationImgResponse;
 import spot.spot.domain.job.query.util.DistanceCalculateUtil;
 import spot.spot.domain.member.entity.Ability;
 import spot.spot.domain.member.entity.AbilityType;
@@ -31,6 +33,8 @@ public interface WorkerCommandMapper {
     @Mapping(target = "workerAbilities", ignore = true) // WorkerAbility 매핑은 별도 처리
     Worker dtoToWorker(RegisterWorkerRequest request, Member member);
 
+    JobCertifiationResponse toJobCertificationResponse (String url);
+
 
     // 2) 구직자와 강점의 교차테이블 생성
     default List<WorkerAbility> mapWorkerAbilities(List<AbilityType> strong, Worker worker, AbilityRepository abilityRepository) {
@@ -50,6 +54,8 @@ public interface WorkerCommandMapper {
 
     // 3. 구직자 lat, lng -> POINT 객체
     default Point mapLatLngToPoint (double lat, double lng, GeometryFactory geometryFactory) {
-        return geometryFactory.createPoint(new Coordinate(lat, lng));
+        Point ans = geometryFactory.createPoint(new Coordinate(lng, lat));
+        ans.setSRID(4326);
+        return ans;
     }
 }
