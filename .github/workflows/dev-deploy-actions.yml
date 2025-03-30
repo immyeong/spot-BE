@@ -42,7 +42,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:${{ github.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/spot-be:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
 
       - name: Create SSH key file
@@ -70,7 +70,7 @@ jobs:
             export VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}  # ✅ 추가
 
             echo "🛠 Updating docker-compose.yml with new image tag"
-            sudo sed -i "s|${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:.*|${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:${{ github.sha }}|" docker-compose.yml
+            sudo sed -i "s|${{ secrets.DOCKERHUB_USERNAME }}/spot-be:.*|${{ secrets.DOCKERHUB_USERNAME }}/spot-be:${{ github.sha }}|" docker-compose.yml
 
             echo "🔁 Restarting containers"
             sudo docker compose down --remove-orphans
