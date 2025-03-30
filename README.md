@@ -75,9 +75,11 @@ ramp-up : 3
 ## WAS Threads 수용 부족
 Threads 수 3000에 ramp-up 수 1을 1분 지속으로 테스트를 설정하고 헬스 체크 API에 적용하니 밑과 같은 에러를 만났습니다.
 Sokcet 끊김이 발생하였기 때문에 WAS의 문제라고 생각했습니다.
+
 <img width="791" alt="스크린샷 2025-03-29 오후 5 20 30" src="https://github.com/user-attachments/assets/6d007670-5625-4a74-85af-73dbad4feef7" />
 
 (1) WAS 대기 큐 늘리기
+
 <img width="523" alt="스크린샷 2025-03-29 오후 5 24 02" src="https://github.com/user-attachments/assets/041dcc8d-f80e-4511-90c2-432fe82ecc72" />
 
 하지만 여전히 전과 같은 `SocketConnection Error` 발생
@@ -143,3 +145,39 @@ ramp-up: 1
 <img width="595" alt="스크린샷 2025-03-29 오후 6 12 42" src="https://github.com/user-attachments/assets/7d974662-aa1f-4ed4-a3df-9835a8639795" />
 
 -> Redis를 사용한 방식이 평균 TPS 27% 향상, 응답시간 30% 향상 하였다. 또한 Socket Connect Error 에러율도 0.26%에서 0.12%로 감소했다.
+
+## (6) Fake-API Server의 사용
+```
+기존 서비스에서 사용하는 카카오로그인, 카카오페이의 외부 API사용에 따른 성능지표를 확인하고싶었습니다.
+외부 API를 호출하면서 테스트를 하기에는 변화된 값이나, 프론트를 거쳐야하는 과정이 걸림돌이 되었습니다.
+그에 따른 방안으로 Fake-API Server를 사용하여 프론트에 의존적인 부분을 백에서 처리하도록 변경하고 테스트를 진행했습니다.
+```
+
+## WAS와 OS 튜닝에 따른 성능 차이(로그인 사용)
+
+Threads : 100
+ramp-up : 100
+지속시간 : 3분
+
+## 튜닝 전
+
+### 부하테스트
+<img width="602" alt="스크린샷 2025-03-30 오후 7 21 52" src="https://github.com/user-attachments/assets/23dbed5f-d6d0-4fff-90bd-410d2cfecd47" />
+
+### 요청 상태 보고서
+<img width="546" alt="스크린샷 2025-03-30 오후 7 22 35" src="https://github.com/user-attachments/assets/29772f0a-79d5-497d-9a0f-04b481a05aef" />
+
+## 튜닝 후
+
+### 부하테스트
+<img width="586" alt="스크린샷 2025-03-30 오후 7 23 23" src="https://github.com/user-attachments/assets/053dd398-81eb-4c66-8479-cb794361a0c6" />
+
+### 요청 상태 보고서
+<img width="569" alt="스크린샷 2025-03-30 오후 7 23 40" src="https://github.com/user-attachments/assets/9e7a2d54-d556-4cb9-a645-4da2627c8d4c" />
+
+### 결론
+OS와 WAS를 튜닝 후 
+- 응답 요청수가 1.5배 상승하였다.
+- TPS는 2배 상승하였다.
+- 평균 응답시간은 1.5배 감소하였다.
+
