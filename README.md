@@ -147,6 +147,7 @@ ramp-up: 1
 -> Redis를 사용한 방식이 평균 TPS 27% 향상, 응답시간 30% 향상 하였다. 또한 Socket Connect Error 에러율도 0.26%에서 0.12%로 감소했다.
 
 ## (6) Fake-API Server의 사용
+https://github.com/immyeong/spot-fake-api
 ```
 기존 서비스에서 사용하는 카카오로그인, 카카오페이의 외부 API사용에 따른 성능지표를 확인하고싶었습니다.
 외부 API를 호출하면서 테스트를 하기에는 변화된 값이나, 프론트를 거쳐야하는 과정이 걸림돌이 되었습니다.
