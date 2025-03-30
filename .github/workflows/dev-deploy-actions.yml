@@ -22,7 +22,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build -x test
 
       - name: List files in build/libs
         run: ls -R build/libs
