@@ -142,4 +142,4 @@ ramp-up: 1
 - Redis를 사용한 재고 차감 방식이 응답시간이 더 짧고, 응답시간 증가 속도가 완만했다.
 <img width="595" alt="스크린샷 2025-03-29 오후 6 12 42" src="https://github.com/user-attachments/assets/7d974662-aa1f-4ed4-a3df-9835a8639795" />
 
--> Redis를 사용한 방식이 평균 TPS 27% 향상, 응답시간 30% 향상 하였다.
+-> Redis를 사용한 방식이 평균 TPS 27% 향상, 응답시간 30% 향상 하였다. 또한 Socket Connect Error 에러율도 0.26%에서 0.12%로 감소했다.
