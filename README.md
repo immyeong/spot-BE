@@ -154,7 +154,7 @@ https://github.com/immyeong/spot-fake-api
 그에 따른 방안으로 Fake-API Server를 사용하여 프론트에 의존적인 부분을 백에서 처리하도록 변경하고 테스트를 진행했습니다.
 ```
 
-## WAS와 OS 튜닝에 따른 성능 차이(로그인 사용)
+## WAS와 OS 튜닝에 따른 성능 차이(외부 API 사용)
 
 Threads : 100
 ramp-up : 100
