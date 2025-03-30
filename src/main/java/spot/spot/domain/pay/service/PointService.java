@@ -3,6 +3,7 @@ package spot.spot.domain.pay.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import spot.spot.domain.member.repository.MemberQueryRepository;
@@ -55,30 +56,34 @@ public class PointService {
         String redisKey = "pointCount:" + pointCode;
         String pointSuccessMemberKey = "success:" + pointCode + ":" + memberId;
 
-        Boolean hasKey = redisTemplate.hasKey(redisKey);
-        if (Boolean.FALSE.equals(hasKey)) {
-            log.info("hasKey is false");
-            throw new GlobalException(ErrorCode.INVALID_POINT_COUNT); // 혹은 EXPIRED_KEY 같은 에러 코드 사용
-        }
+        String luaScript = "" +
+                "if redis.call('exists', KEYS[1]) == 0 then return -1 end;" +
+                "local val = redis.call('decr', KEYS[1]);" +
+                "if val < 0 then " +
+                "   redis.call('incr', KEYS[1]); " +
+                "   return 0; " +
+                "end;" +
+                "redis.call('setex', KEYS[2], ARGV[1], '1');" +
+                "return 1;";
 
-//        Boolean notClaimed = redisTemplate.opsForValue().setIfAbsent(pointSuccessMemberKey, "1", 5, TimeUnit.SECONDS);
-//        if (!Boolean.TRUE.equals(notClaimed)) {
-//            throw new GlobalException(ErrorCode.ALREADY_SUCCESS);
-//        }
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptText(luaScript);
+        script.setResultType(Long.class);
 
-        // 재고 차감 (DECR)
-        Long remaining = redisTemplate.opsForValue().decrement(redisKey);
-        if (remaining == null || remaining < 0) {
-            // 재고 소진 → 재고 복구 및 락 해제
-            log.info("여기구나?");
-            redisTemplate.opsForValue().increment(redisKey);
-            redisTemplate.delete(pointSuccessMemberKey);
-            boolean checkExpirePoint = handlePointExpire(pointCode);
-            if(!checkExpirePoint) {
-                throw new GlobalException(ErrorCode.INVALID_POINT_COUNT);
+        List<String> keys = Arrays.asList(redisKey, pointSuccessMemberKey);
+        Long result = redisTemplate.execute(script, keys, "5");
+
+        if (result == null || result == -1) {
+            throw new GlobalException(ErrorCode.INVALID_POINT_COUNT); // 키 없음
+        } else if (result == 0) {
+            // 재고 소진 → expire 로직 진입
+            boolean expired = handlePointExpire(pointCode);
+            if (!expired) {
+                throw new GlobalException(ErrorCode.INVALID_POINT_COUNT); // 이중 처리 방지
             }
         }
 
+        // Redis 재고 차감 성공한 경우 → DB 기록 처리
         memberQueryRepository.updatePointByRegister(Long.valueOf(memberId), pointCode);
     }
 
