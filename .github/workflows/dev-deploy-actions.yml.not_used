@@ -1,133 +1,79 @@
-name: Build and Push Docker Images to AWS ECR
+name: Docker Core Build and Push
 
 on:
   push:
-    branches:
-      - develop # 필요하면 변경 가능
-
-permissions:
-  id-token: write  # OIDC를 이용한 AWS 인증
-  contents: read   # actions/checkout을 위해 필요
+    branches: [ "develop" ]
 
 jobs:
-  build-and-push-app:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
+          distribution: 'temurin'  # adopt → temurin (AdoptOpenJDK is deprecated)
           java-version: '17'
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: |
-          chmod +x gradlew
-          ./gradlew build -x test --no-daemon
+        run: ./gradlew build
 
-      - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: List files in build/libs
+        run: ls -R build/libs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
         with:
-          role-to-assume: arn:aws:iam::160885287796:role/GithubActionsOIDC 
-          role-session-name: GitHubActionsSession
-          aws-region: ap-northeast-2 
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and Push Backend App Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_NAME: backend-repo
-        run: |
-          docker build -t $ECR_REGISTRY/$IMAGE_NAME:latest -f Dockerfile_be .
-          docker push $ECR_REGISTRY/$IMAGE_NAME:latest
-
-  build-and-push-db:
-    runs-on: ubuntu-latest
-    needs: build-and-push-app  
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
         with:
-          role-to-assume: arn:aws:iam::160885287796:role/GithubActionsOIDC
-          role-session-name: GitHubActionsSession
-          aws-region: ap-northeast-2
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Create SSH key file
+        run: echo "${{ secrets.EC2_SSH_KEY }}" > ssh_key.pem
 
-      - name: Check if DB schema has changed
-        id: check-schema
+      - name: Set permissions for SSH key
+        run: chmod 600 ssh_key.pem
+
+      - name: Disable strict host key checking
         run: |
-          DB_IMAGE_TAG="db-init"
-          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          mkdir -p ~/.ssh
+          echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
-          # 기존 ECR 이미지 존재 여부 확인
-          if aws ecr describe-images --repository-name backend-db --image-ids imageTag=$DB_IMAGE_TAG >/dev/null 2>&1; then
-            echo "DB Image exists, checking if schema has changed..."
-            
-            # 기존 ECR 이미지의 digest 가져오기
-            EXISTING_DIGEST=$(aws ecr describe-images --repository-name backend-db --image-ids imageTag=$DB_IMAGE_TAG --query 'imageDetails[0].imageDigest' --output text)
-
-            # 현재 SQL 스키마 파일의 해시값 계산
-            CURRENT_SCHEMA_HASH=$(sha256sum schema/create_table.sql | awk '{print $1}')
-
-            # 스키마 변경 감지
-            if [[ "$CURRENT_SCHEMA_HASH" != "$EXISTING_DIGEST" ]]; then
-              echo "Schema has changed, rebuilding image."
-              echo "SKIP_BUILD=false" >> $GITHUB_ENV
-            else
-              echo "Schema has not changed, skipping build."
-              echo "SKIP_BUILD=true" >> $GITHUB_ENV
-            fi
-          else
-            echo "DB Image does not exist, proceeding with build."
-            echo "SKIP_BUILD=false" >> $GITHUB_ENV
-          fi
-
-      - name: Build and Push DB Image
-        if: env.SKIP_BUILD == 'false'
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          DB_IMAGE_NAME: backend-db
-        run: |
-          docker build -t $ECR_REGISTRY/$DB_IMAGE_NAME:db-init -f Dockerfile_db .
-          docker push $ECR_REGISTRY/$DB_IMAGE_NAME:db-init
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [build-and-push-app, build-and-push-db]  # ✅ 두 개의 빌드 완료 후 실행
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
         with:
-          role-to-assume: arn:aws:iam::160885287796:role/GithubActionsOIDC
-          role-session-name: GitHubActionsSession
-          aws-region: ap-northeast-2
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: VAULT_TOKEN  # ✅ 추가: GitHub Secrets -> EC2로 환경변수 전달
+          script: |
+            cd /home/ubuntu
 
-      - name: Trigger AWS CodeDeploy
-        run: |
-          aws deploy create-deployment \
-            --application-name be \
-            --deployment-group-name be \
-            --s3-location bucket=testnet-spot-deploy,key=be.zip,bundleType=zip
+            echo "✅ Setting VAULT_TOKEN as environment variable"
+            export VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}  # ✅ 추가
+
+            echo "🛠 Updating docker-compose.yml with new image tag"
+            sudo sed -i "s|${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:.*|${{ secrets.DOCKERHUB_USERNAME }}/spot-fake-api:${{ github.sha }}|" docker-compose.yml
+
+            echo "🔁 Restarting containers"
+            sudo docker compose down --remove-orphans
+            sudo docker compose pull
+            sudo docker compose up -d
+            sudo docker image prune -f
