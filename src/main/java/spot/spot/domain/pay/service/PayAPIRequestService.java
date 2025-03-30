@@ -37,7 +37,7 @@ public class PayAPIRequestService {
         try {
             ResponseEntity<T> response = restTemplate.exchange(
                     ///환경 변수 넣어주세요.. (domain/fake-api/pay/ + url)입니다.
-                    "http://172.16.24.136:8080/fake-api/pay/" + url,
+                    "http://43.200.170.145:8080/fake-api/pay/" + url,
                     HttpMethod.POST,
                     requestEntity,
                     responseType

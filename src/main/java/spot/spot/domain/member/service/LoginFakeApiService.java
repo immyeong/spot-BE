@@ -20,7 +20,7 @@ public class LoginFakeApiService {
     public <T> T loginfakeAPIRequest(String memberId, Class<T> responseType) {
         try {
             ///여기 url도 바꿔야합니다!! 환경 변수 설정 부탁드립니다..!
-            String requestUrl = fromHttpUrl("http://172.16.24.136:8080/fake-api/login/token")
+            String requestUrl = fromHttpUrl("http://43.200.170.145:8080/fake-api/login/token")
                     .queryParam("memberId", memberId)
                     .toUriString();
 
